@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quem é Esse Pokémon?</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Quem é Esse Pokémon?</h1>
+        
+        <div id="game-area">
+            <p id="timer">Tempo: <span id="time-left">60</span>s</p>
+            <img id="pokemon-image" src="" alt="Imagem do Pokémon" class="hidden"> 
+            
+            <div id="feedback-message"></div>
+            
+            <div class="input-group">
+                <input type="text" id="guess-input" placeholder="Digite o nome do Pokémon" autocomplete="off">
+                <button id="check-button">Verificar</button>
+            </div>
+            
+            <p id="score">Pontuação: 0</p>
+        </div>
+        
+        <button id="start-button">Começar Jogo</button>
+
+        <p id="hint-text"></p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
