@@ -32,21 +32,25 @@
             <p id="highscore-label">Recorde: 0</p>
         </div>
         
-        <!-- Nova Área de Jogo para o Multiplayer -->
+        <!-- Nova Área de Jogo para o Multiplayer (dentro do container principal) -->
         <div id="multiplayer-game-area" class="hidden">
             <p id="multiplayer-timer-label">Tempo: <span id="multiplayer-time-left">60</span>s</p>
             <img id="multiplayer-pokemon-image" src="" alt="Imagem do Pokémon" class="hidden">
-            <div id="multiplayer-feedback"></div>
+            <div id="multiplayer-round-feedback" class="multiplayer-feedback"></div>
             <div class="multiplayer-arenas">
                 <div id="my-arena">
                     <h3>Você</h3>
-                    <div id="my-guess-container"></div>
+                    <p id="my-score" class="multiplayer-score">Pontos: 0</p>
+                    <div id="my-guess-container" class="multiplayer-guess-container"></div>
                 </div>
                 <div id="opponent-arena">
                     <h3>Oponente</h3>
-                    <div id="opponent-guess-container"></div>
-                </div>
+                    <p id="opponent-score" class="multiplayer-score">Pontos: 0</p>
+                    <div id="opponent-guess-container" class="multiplayer-guess-container"></div>
+                 </div>
             </div>
+            <!-- Botão que só o host verá -->
+            <button id="start-multiplayer-button" class="hidden">Iniciar Partida</button>
         </div>
 
         <div class="game-modes">

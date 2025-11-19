@@ -15,6 +15,7 @@ let GAME_TIME = 30; // Segundos (valor padrão, será atualizável)
 let correctPokemonName = '';
 let currentScore = 0;
 let timeLeft = GAME_TIME;
+let correctGuessesCount = 0; // Nova variável para contar os acertos
 let timerInterval = null;
 let highScore = 0;
 let currentLang = 'en'; // Define 'en' como idioma padrão
@@ -45,6 +46,7 @@ const gameTitle = document.getElementById('game-title');
 const timerLabel = document.getElementById('timer-label');
 const scoreLabel = document.getElementById('score-label');
 const highScoreLabel = document.getElementById('highscore-label');
+const guessesLabel = document.createElement('div'); // Cria o elemento para o contador de acertos
 const copyrightFooter = document.getElementById('copyright-footer');
 const settingsTitle = document.getElementById('settings-title');
 const generationsLabel = document.getElementById('generations-label');
@@ -59,11 +61,14 @@ const roomInfo = document.getElementById('room-info');
 const roomIdDisplay = document.getElementById('room-id-display');
 // Seletores da área multiplayer
 const multiplayerGameArea = document.getElementById('multiplayer-game-area');
-const multiplayerPokemonImage = document.getElementById('multiplayer-pokemon-image');
+const mainContainer = document.querySelector('.container');
 const myGuessContainer = document.getElementById('my-guess-container');
 const opponentGuessContainer = document.getElementById('opponent-guess-container');
-const multiplayerFeedback = document.getElementById('multiplayer-feedback');
+const multiplayerRoundFeedback = document.getElementById('multiplayer-round-feedback'); // Este pode ser o mesmo que multiplayer-feedback
 const multiplayerTimerLabel = document.getElementById('multiplayer-timer-label');
+const startMultiplayerButton = document.getElementById('start-multiplayer-button');
+const myScoreDisplay = document.getElementById('my-score');
+const opponentScoreDisplay = document.getElementById('opponent-score');
 let multiplayerTimeLeft = 0;
 
 
@@ -79,6 +84,7 @@ const translations = {
         playAgain: 'Jogar Novamente',
         highScore: 'Recorde',
         correctGuess: 'Parabéns! É o {pokemonName}!',
+        guesses: 'Acertos', // Tradução para o novo contador
         timeUp: 'Tempo esgotado! O pokémon era o {pokemonName}!.',
         settingsTitle: 'Configurações',
         generationsLabel: 'Gerações de Pokémon:',
@@ -95,6 +101,7 @@ const translations = {
         playAgain: 'Play Again',
         highScore: 'High Score',
         correctGuess: 'Congratulations! It\'s {pokemonName}!',
+        guesses: 'Guesses', // Tradução para o novo contador
         timeUp: 'Time\'s up! The Pokémon is {pokemonName}!.',
         settingsTitle: 'Settings',
         generationsLabel: 'Pokémon Generations:',
@@ -296,14 +303,8 @@ function updateTimer() {
         if (timeLeft <= 0) {
             endGame();
         }
-    } else if (multiplayerGameArea.classList.contains('active')) {
-        multiplayerTimeLeft--;
-        const multiplayerTimerDisplay = document.getElementById('multiplayer-time-left');
-        if (multiplayerTimerDisplay) {
-            multiplayerTimerDisplay.textContent = multiplayerTimeLeft;
-        }
-        // A lógica de fim de jogo multiplayer será controlada pelo servidor
     }
+    // O timer do multiplayer é controlado pelo servidor e atualizado pelo evento 'timerTick'
 }
 
 // 5. Finaliza o jogo
@@ -337,8 +338,10 @@ function startGame() {
     // Reseta o estado do jogo
     startButton.style.display = 'none'; // Esconde o botão de começar
     gameArea.classList.add('active'); // Mostra a área do jogo
+    correctGuessesCount = 0; // Zera o contador de acertos
     currentScore = 0;
     document.getElementById('check-button').style.display = 'none';
+    guessesLabel.innerHTML = `${translations[currentLang].guesses}: <span id="guesses-count">0</span>`;
     scoreLabel.textContent = `${translations[currentLang].score}: ${currentScore}`;
     settingsButton.disabled = true; // Desabilita o botão de configurações durante o jogo
 
@@ -374,8 +377,13 @@ function handleCorrectGuess() {
         return; // Não busca o próximo pokémon, espera o servidor mandar
     }
 
+    // Lógica de um jogador (que foi removida por engano)
     currentScore += Math.max(points, MINIMUM_SCORE); // Adiciona a pontuação calculada ou a mínima
     scoreLabel.textContent = `${translations[currentLang].score}: ${currentScore}`;
+
+    correctGuessesCount++; // Incrementa o contador de acertos
+    guessesLabel.innerHTML = `${translations[currentLang].guesses}: <span id="guesses-count">${correctGuessesCount}</span>`;
+
     feedbackMessage.textContent = translations[currentLang].correctGuess.replace('{pokemonName}', correctPokemonName.toUpperCase());
     feedbackMessage.className = 'correct';
     pokemonImage.classList.remove('hidden');
@@ -422,12 +430,18 @@ function setLanguage() {
     timerLabel.innerHTML = `${t.time}: <span id="time-left">${GAME_TIME}</span>s`;
     highScoreLabel.textContent = `${t.highScore}: ${highScore}`;
     scoreLabel.textContent = `${t.score}: 0`;
+    guessesLabel.innerHTML = `${t.guesses}: <span id="guesses-count">0</span>`;
 }
 
 // --- Event Listeners ---
 
 // Inicia o jogo
 startButton.addEventListener('click', startGame);
+
+startMultiplayerButton.addEventListener('click', () => {
+    const roomId = document.body.dataset.roomId;
+    socket.emit('startMatch', roomId);
+});
 
 // Controla a música
 musicToggleButton.addEventListener('click', toggleMusic);
@@ -470,6 +484,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Carrega a pontuação mais alta salva
     highScore = parseInt(localStorage.getItem('pokeTyperHighScore')) || 0;
 
+    // Adiciona o novo contador de acertos ao DOM, logo após a pontuação
+    guessesLabel.id = 'guesses-label';
+    guessesLabel.className = 'stat-item';
+    scoreLabel.parentNode.insertBefore(guessesLabel, highScoreLabel);
+
     setLanguage();
     updateActivePokemonList(); // Define a lista inicial de Pokémon (Gen 1)
     fetchNewPokemon();
@@ -504,36 +523,55 @@ socket.on('roomCreated', (roomId) => {
     document.body.dataset.roomId = roomId;
 });
 
-socket.on('gameStart', (data) => {
+socket.on('roomJoined', (data) => {
+    const { roomId } = data;
+    // Armazena o ID da sala para uso futuro (para o jogador que entra)
+    document.body.dataset.roomId = roomId;
+});
+
+socket.on('roomReady', (data) => {
+    // A sala está pronta, com 2 jogadores. Prepara a interface para AMBOS.
     multiplayerModal.classList.remove('visible');
-    document.querySelector('.game-modes').style.display = 'none';
-    startButton.style.display = 'none'; // Garante que o botão de um jogador suma
+    mainContainer.classList.add('multiplayer-active');
     gameArea.style.display = 'none';
     multiplayerGameArea.classList.add('active');
+
+    // Esconde os botões de modo de jogo para ambos os jogadores
+    document.querySelector('.game-modes').style.display = 'none';
+
+    if (data.hostId === socket.id) {
+        startMultiplayerButton.classList.remove('hidden');
+    }
+});
+
+socket.on('gameStart', (data) => {
+    multiplayerModal.classList.remove('visible');
+    mainContainer.classList.add('multiplayer-active'); // Expande o container principal
+    gameArea.style.display = 'none'; // Esconde a área de um jogador
+    multiplayerGameArea.classList.add('active'); // Mostra a área multiplayer
     settingsButton.disabled = true;
+    startMultiplayerButton.classList.add('hidden'); // ESCONDE o botão para TODOS
 
     correctPokemonName = data.pokemonName;
     
     // Configura a imagem e os slots
-    multiplayerPokemonImage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
-    multiplayerPokemonImage.classList.add('hidden');
+    document.getElementById('multiplayer-pokemon-image').src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
+    document.getElementById('multiplayer-pokemon-image').classList.add('hidden');
     createMultiplayerLetterSlots(data.pokemonName);
 
-    // Inicia o timer para o modo multiplayer
-    multiplayerTimeLeft = data.gameTime;
+    // O timer do multiplayer é apenas visual e controlado pelo servidor
     const multiplayerTimerDisplay = document.getElementById('multiplayer-time-left');
-    multiplayerTimerDisplay.textContent = multiplayerTimeLeft;
-    clearInterval(timerInterval);
-    timerInterval = setInterval(updateTimer, 1000);
+    multiplayerTimerDisplay.textContent = data.gameTime;
+
 });
 
 socket.on('nextRound', (data) => {
-    multiplayerFeedback.textContent = '';
+    multiplayerRoundFeedback.textContent = '';
     correctPokemonName = data.pokemonName;
-    multiplayerPokemonImage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
+    document.getElementById('multiplayer-pokemon-image').src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
     // Garante que a imagem esteja pronta para a próxima rodada
-    multiplayerPokemonImage.classList.remove('revealed');
-    multiplayerPokemonImage.classList.add('hidden');
+    document.getElementById('multiplayer-pokemon-image').classList.remove('revealed');
+    document.getElementById('multiplayer-pokemon-image').classList.add('hidden');
     createMultiplayerLetterSlots(data.pokemonName);
 });
 
@@ -541,20 +579,51 @@ socket.on('roundEnd', (data) => {
     const { winnerId } = data;
     if (winnerId === socket.id) {
         // Você venceu!
-        multiplayerFeedback.textContent = "Você venceu a rodada!";
-        multiplayerFeedback.className = 'correct';
+        multiplayerRoundFeedback.textContent = "Você venceu a rodada!";
+        multiplayerRoundFeedback.className = 'correct';
     } else {
         // Você perdeu!
-        multiplayerFeedback.textContent = "Você perdeu a rodada!";
-        multiplayerFeedback.className = 'incorrect';
+        multiplayerRoundFeedback.textContent = "Você perdeu a rodada!";
+        multiplayerRoundFeedback.className = 'incorrect';
     }
     // Revela o Pokémon para todos
-    multiplayerPokemonImage.classList.remove('hidden');
-    multiplayerPokemonImage.classList.add('revealed');
+    document.getElementById('multiplayer-pokemon-image').classList.remove('hidden');
+    document.getElementById('multiplayer-pokemon-image').classList.add('revealed');
 });
 
 socket.on('opponentProgress', (data) => {
     opponentGuessContainer.innerHTML = data.progressHtml;
+});
+
+socket.on('updateScores', (scores) => {
+    const myScore = scores.find(s => s.id === socket.id)?.score || 0;
+    const opponentScore = scores.find(s => s.id !== socket.id)?.score || 0;
+
+    myScoreDisplay.textContent = `Pontos: ${myScore}`;
+    opponentScoreDisplay.textContent = `Pontos: ${opponentScore}`;
+});
+
+socket.on('timerTick', (timeLeft) => {
+    const multiplayerTimerDisplay = document.getElementById('multiplayer-time-left');
+    if (multiplayerTimerDisplay) {
+        multiplayerTimerDisplay.textContent = timeLeft;
+    }
+});
+
+socket.on('matchEnd', (data) => {
+    const { winnerId } = data;
+    let finalMessage = '';
+    if (winnerId === 'draw') {
+        finalMessage = "Empate!";
+    } else if (winnerId === socket.id) {
+        finalMessage = "Você venceu o jogo!";
+    } else {
+        finalMessage = "Você perdeu o jogo!";
+    }
+    multiplayerRoundFeedback.textContent = finalMessage;
+    settingsButton.disabled = false; // Reabilita o botão de configurações
+    startMultiplayerButton.classList.remove('hidden'); // REAPARECE o botão
+    startMultiplayerButton.disabled = false; // REABILITA o botão para uma nova partida
 });
 
 socket.on('error', (message) => {
