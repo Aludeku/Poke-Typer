@@ -30,7 +30,6 @@ h1 {
     color: #ffde00; /* Amarelo Pokémon */
     margin-bottom: 1.5rem;
     font-size: 2.5rem; /* Aumenta um pouco o tamanho */
-    /* Adiciona o contorno azul escuro */
     -webkit-text-stroke: 2px #3B4CCA;
 }
 
@@ -171,10 +170,16 @@ h1 {
   40%, 60% { transform: translateX(4px); }
 }
 
-#music-toggle-button {
+.top-buttons {
     position: fixed;
     top: 1rem;
     right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 100; /* Garante que fiquem acima de outros elementos */
+}
+
+#music-toggle-button, #settings-button {
     background: transparent;
     border: 2px solid #ddd;
     border-radius: 50%;
@@ -183,10 +188,104 @@ h1 {
     font-size: 1.2rem;
     cursor: pointer;
     transition: background-color 0.2s, border-color 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-#music-toggle-button:hover {
+#music-toggle-button:hover, #settings-button:hover {
     background-color: #f0f0f0;
+}
+
+#settings-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* Estilos do Modal de Configurações */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    visibility: hidden; /* Escondido por padrão */
+    opacity: 0;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal-overlay.visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    text-align: left;
+    width: 90%;
+    max-width: 400px;
+}
+
+.modal-content h2 {
+    text-align: center;
+    margin-top: 0;
+    color: #333;
+}
+
+.settings-group p {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.checkbox-group label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.radio-group {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 1.5rem;
+}
+
+.radio-group label {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#save-settings-button {
+    width: 100%;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+
+#save-settings-button:hover {
+    background-color: #0056b3;
 }
 
 #copyright-footer {

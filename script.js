@@ -1,6 +1,17 @@
 // Variáveis Globais
-const POKEMON_COUNT = 151; // Limita o jogo aos Pokémon da Geração 1
-const GAME_TIME = 60; // Segundos
+const GENERATION_RANGES = {
+    1: { start: 1, end: 151 },
+    2: { start: 152, end: 251 },
+    3: { start: 252, end: 386 },
+    4: { start: 387, end: 493 },
+    5: { start: 494, end: 649 },
+    6: { start: 650, end: 721 },
+    7: { start: 722, end: 809 },
+    8: { start: 810, end: 905 },
+    9: { start: 906, end: 1025 },
+};
+let activePokemonIds = []; // Array com os IDs dos Pokémon que podem aparecer
+let GAME_TIME = 30; // Segundos (valor padrão, será atualizável)
 let correctPokemonName = '';
 let currentScore = 0;
 let timeLeft = GAME_TIME;
@@ -16,11 +27,19 @@ const gameArea = document.getElementById('game-area');
 let timerDisplay = document.getElementById('time-left'); // Alterado para let
 const backgroundMusic = document.getElementById('background-music');
 const musicToggleButton = document.getElementById('music-toggle-button');
+const settingsButton = document.getElementById('settings-button');
+const settingsModal = document.getElementById('settings-modal');
+const saveSettingsButton = document.getElementById('save-settings-button');
+const generationCheckboxes = document.querySelectorAll('input[name="generation"]');
+const timeRadioButtons = document.querySelectorAll('input[name="game-time"]');
 // Elementos de texto para tradução
 const gameTitle = document.getElementById('game-title');
 const timerLabel = document.getElementById('timer-label');
 const scoreLabel = document.getElementById('score-label');
 const copyrightFooter = document.getElementById('copyright-footer');
+const settingsTitle = document.getElementById('settings-title');
+const generationsLabel = document.getElementById('generations-label');
+const timeSettingsLabel = document.getElementById('time-settings-label');
 
 backgroundMusic.volume = 0.03;
 
@@ -33,7 +52,10 @@ const translations = {
         startButton: 'Começar Jogo',
         playAgain: 'Jogar Novamente',
         correctGuess: 'Parabéns! É o {pokemonName}!',
-        timeUp: 'Tempo esgotado! Sua pontuação final: {score}.',
+        timeUp: 'Tempo esgotado! O pokémon era o {pokemonName}!.',
+        settingsTitle: 'Configurações',
+        generationsLabel: 'Gerações de Pokémon:',
+        timeSettingsLabel: 'Tempo da Partida:',
         loadError: 'Erro ao carregar Pokémon. Tente novamente.',
         footer: 'Desenvolvido por <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon é propriedade de ©GameFreak ©CreaturesInk e ©Nintendo.',
     },
@@ -44,7 +66,10 @@ const translations = {
         startButton: 'Start Game',
         playAgain: 'Play Again',
         correctGuess: 'Congratulations! It\'s {pokemonName}!',
-        timeUp: 'Time\'s up! Your final score: {score}.',
+        timeUp: 'Time\'s up! The Pokémon is {pokemonName}!.',
+        settingsTitle: 'Settings',
+        generationsLabel: 'Pokémon Generations:',
+        timeSettingsLabel: 'Game Duration:',
         loadError: 'Error loading Pokémon. Please try again.',
         footer: 'Developed by <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon is property of ©GameFreak ©CreaturesInk and ©Nintendo.',
     }
@@ -52,9 +77,29 @@ const translations = {
 
 // --- Funções Principais ---
 
+// 1. Atualiza a lista de Pokémon ativos com base nas checkboxes
+function updateActivePokemonList() {
+    activePokemonIds = [];
+    generationCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            const gen = checkbox.value;
+            const range = GENERATION_RANGES[gen];
+            for (let i = range.start; i <= range.end; i++) {
+                activePokemonIds.push(i);
+            }
+        }
+    });
+    // Garante que sempre haja pelo menos uma geração selecionada
+    if (activePokemonIds.length === 0) {
+        generationCheckboxes[0].checked = true; // Marca a Gen 1
+        updateActivePokemonList(); // Roda a função de novo
+    }
+}
+
 // 1. Gera um número aleatório (ID do Pokémon)
 function getRandomPokemonId() {
-    return Math.floor(Math.random() * POKEMON_COUNT) + 1;
+    const randomIndex = Math.floor(Math.random() * activePokemonIds.length);
+    return activePokemonIds[randomIndex];
 }
 
 // 2. Busca e exibe um novo Pokémon
@@ -190,10 +235,13 @@ function endGame() {
         slot.disabled = true;
     });
     document.getElementById('check-button').style.display = 'none'; // Esconde o botão de verificar
-    feedbackMessage.textContent = translations[currentLang].timeUp.replace('{score}', currentScore);
+    feedbackMessage.textContent = translations[currentLang].timeUp.replace('{pokemonName}', correctPokemonName.toUpperCase());
     feedbackMessage.className = 'info';
     startButton.textContent = translations[currentLang].playAgain;
     startButton.style.display = 'block';
+    pokemonImage.classList.remove('hidden');
+    pokemonImage.classList.add('revealed');
+    settingsButton.disabled = false; // Reabilita o botão de configurações
 }
 
 // 4. Inicia ou reinicia o jogo
@@ -204,6 +252,7 @@ function startGame() {
     currentScore = 0;
     document.getElementById('check-button').style.display = 'none';
     scoreLabel.textContent = `${translations[currentLang].score}: ${currentScore}`;
+    settingsButton.disabled = true; // Desabilita o botão de configurações durante o jogo
 
     timerDisplay = document.getElementById('time-left'); // Re-seleciona o elemento do timer
     // Reseta e inicia o cronômetro
@@ -248,6 +297,9 @@ function setLanguage() {
     gameTitle.textContent = t.title;
     startButton.textContent = t.startButton;
     copyrightFooter.innerHTML = t.footer;
+    settingsTitle.textContent = t.settingsTitle;
+    generationsLabel.textContent = t.generationsLabel;
+    timeSettingsLabel.textContent = t.timeSettingsLabel;
 
     // Atualiza textos que também são alterados durante o jogo
     timerLabel.innerHTML = `${t.time}: <span id="time-left">${GAME_TIME}</span>s`;
@@ -262,10 +314,26 @@ startButton.addEventListener('click', startGame);
 // Controla a música
 musicToggleButton.addEventListener('click', toggleMusic);
 
+// Controla o modal de configurações
+settingsButton.addEventListener('click', () => {
+    settingsModal.classList.add('visible');
+});
+
+saveSettingsButton.addEventListener('click', () => {
+    updateActivePokemonList();
+    // Atualiza a variável GAME_TIME com o valor selecionado
+    const selectedTime = document.querySelector('input[name="game-time"]:checked').value;
+    GAME_TIME = parseInt(selectedTime, 10);
+    timerLabel.innerHTML = `${translations[currentLang].time}: <span id="time-left">${GAME_TIME}</span>s`;
+    settingsModal.classList.remove('visible');
+    //fetchNewPokemon(); // Carrega um novo Pokémon com as novas configurações
+});
+
 // Inicialização: Carrega o primeiro Pokémon assim que a página é carregada
 // mas o esconde até que o usuário clique em "Começar Jogo"
 document.addEventListener('DOMContentLoaded', () => {
     setLanguage();
+    updateActivePokemonList(); // Define a lista inicial de Pokémon (Gen 1)
     fetchNewPokemon();
 });
 
