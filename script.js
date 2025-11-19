@@ -66,6 +66,7 @@ const myGuessContainer = document.getElementById('my-guess-container');
 const opponentGuessContainer = document.getElementById('opponent-guess-container');
 const multiplayerRoundFeedback = document.getElementById('multiplayer-round-feedback'); // Este pode ser o mesmo que multiplayer-feedback
 const multiplayerTimerLabel = document.getElementById('multiplayer-timer-label');
+const multiplayerWinsLabel = document.getElementById('multiplayer-wins-label'); // Novo elemento para vitórias
 const startMultiplayerButton = document.getElementById('start-multiplayer-button');
 const myScoreDisplay = document.getElementById('my-score');
 const opponentScoreDisplay = document.getElementById('opponent-score');
@@ -85,6 +86,7 @@ const translations = {
         highScore: 'Recorde',
         correctGuess: 'Parabéns! É o {pokemonName}!',
         guesses: 'Acertos', // Tradução para o novo contador
+        matchWins: 'Vitórias', // Tradução para vitórias de partida
         timeUp: 'Tempo esgotado! O pokémon era o {pokemonName}!.',
         settingsTitle: 'Configurações',
         generationsLabel: 'Gerações de Pokémon:',
@@ -102,6 +104,7 @@ const translations = {
         highScore: 'High Score',
         correctGuess: 'Congratulations! It\'s {pokemonName}!',
         guesses: 'Guesses', // Tradução para o novo contador
+        matchWins: 'Wins', // Tradução para vitórias de partida
         timeUp: 'Time\'s up! The Pokémon is {pokemonName}!.',
         settingsTitle: 'Settings',
         generationsLabel: 'Pokémon Generations:',
@@ -589,6 +592,11 @@ socket.on('roundEnd', (data) => {
     // Revela o Pokémon para todos
     document.getElementById('multiplayer-pokemon-image').classList.remove('hidden');
     document.getElementById('multiplayer-pokemon-image').classList.add('revealed');
+
+    // Desabilita os inputs para ambos os jogadores ao final da rodada
+    myGuessContainer.querySelectorAll('input.letter-slot').forEach(slot => {
+        slot.disabled = true;
+    });
 });
 
 socket.on('opponentProgress', (data) => {
@@ -596,11 +604,15 @@ socket.on('opponentProgress', (data) => {
 });
 
 socket.on('updateScores', (scores) => {
-    const myScore = scores.find(s => s.id === socket.id)?.score || 0;
-    const opponentScore = scores.find(s => s.id !== socket.id)?.score || 0;
+    const me = scores.find(s => s.id === socket.id) || { score: 0, matchWins: 0 }; // Garante default
+    const opponent = scores.find(s => s.id !== socket.id) || { score: 0, matchWins: 0 }; // Garante default
 
-    myScoreDisplay.textContent = `Pontos: ${myScore}`;
-    opponentScoreDisplay.textContent = `Pontos: ${opponentScore}`;
+    myScoreDisplay.textContent = `${translations[currentLang].score}: ${me.score}`;
+    opponentScoreDisplay.textContent = `${translations[currentLang].score}: ${opponent.score}`;
+
+    // Atualiza o placar de vitórias
+    const winsDisplay = document.getElementById('multiplayer-wins-display');
+    winsDisplay.textContent = `${me.matchWins || 0} x ${opponent.matchWins || 0}`; // Garante 0 se undefined/null
 });
 
 socket.on('timerTick', (timeLeft) => {
@@ -611,7 +623,7 @@ socket.on('timerTick', (timeLeft) => {
 });
 
 socket.on('matchEnd', (data) => {
-    const { winnerId } = data;
+    const { winnerId, players } = data;
     let finalMessage = '';
     if (winnerId === 'draw') {
         finalMessage = "Empate!";
@@ -620,10 +632,26 @@ socket.on('matchEnd', (data) => {
     } else {
         finalMessage = "Você perdeu o jogo!";
     }
+
+    // Zera as pontuações de Rodada na interface para a próxima partida
+    myScoreDisplay.textContent = `${translations[currentLang].score}: 0`;
+    opponentScoreDisplay.textContent = `${translations[currentLang].score}: 0`;
+
+    // Atualiza o placar de vitórias no final da partida
+    const me = players.find(p => p.id === socket.id);
+    const opponent = players.find(p => p.id !== socket.id);
+    const winsDisplay = document.getElementById('multiplayer-wins-display');
+    winsDisplay.textContent = `${me.matchWins} x ${opponent.matchWins}`;
+
     multiplayerRoundFeedback.textContent = finalMessage;
     settingsButton.disabled = false; // Reabilita o botão de configurações
-    startMultiplayerButton.classList.remove('hidden'); // REAPARECE o botão
-    startMultiplayerButton.disabled = false; // REABILITA o botão para uma nova partida
+    startMultiplayerButton.classList.remove('hidden'); // REAPARECE o botão "Iniciar Partida"
+    startMultiplayerButton.disabled = false; // REABILITA o botão "Iniciar Partida" para uma nova partida.
+
+    // Bloqueia os inputs do jogador local quando a partida termina
+    myGuessContainer.querySelectorAll('input.letter-slot').forEach(slot => {
+        slot.disabled = true;
+    });
 });
 
 socket.on('error', (message) => {

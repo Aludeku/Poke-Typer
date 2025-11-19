@@ -44,6 +44,12 @@ function startGameForRoom(roomId) {
                 const pokemonName = data.name.toLowerCase().replace('-', ' ');
                 room.pokemonName = pokemonName;
                 room.roundOver = false; // Inicia a rodada como "não terminada"
+
+                // Zera a pontuação da partida atual para todos os jogadores
+                room.players.forEach(player => {
+                    player.score = 0;
+                });
+
                 // Envia o sinal de início para TODOS na sala
                 const gameTime = 60; // Tempo fixo para multiplayer
                 room.gameTimer = gameTime;
@@ -61,7 +67,13 @@ function startGameForRoom(roomId) {
                         const player1 = room.players[0];
                         const player2 = room.players[1];
                         const winnerId = player1.score > player2.score ? player1.id : (player2.score > player1.score ? player2.id : 'draw');
-                        io.to(roomId).emit('matchEnd', { winnerId });
+                        
+                        // Incrementa a contagem de vitórias da partida
+                        const winnerPlayer = room.players.find(p => p.id === winnerId);
+                        if (winnerPlayer) {
+                            winnerPlayer.matchWins++;
+                        }
+                        io.to(roomId).emit('matchEnd', { winnerId, players: room.players });
                     }
                 }, 1000);
             }
@@ -79,7 +91,7 @@ io.on('connection', (socket) => {
         const roomId = Math.random().toString(36).substring(2, 6).toUpperCase();
         socket.join(roomId); // Coloca o jogador na sala
         rooms[roomId] = {
-            players: [{ id: socket.id, score: 0 }],
+            players: [{ id: socket.id, score: 0, matchWins: 0 }], // Inicializa matchWins aqui
             pokemonName: '', // Pokémon será definido quando o jogo começar
             roundOver: true // A rodada está "terminada" até o jogo começar
         };
@@ -90,7 +102,7 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', (roomId) => {
         if (rooms[roomId] && rooms[roomId].players.length < 2) {
             socket.join(roomId);
-            rooms[roomId].players.push({ id: socket.id, score: 0 });
+            rooms[roomId].players.push({ id: socket.id, score: 0, matchWins: 0 }); // Inicializa matchWins aqui também
             // Agora que a sala tem 2 jogadores, inicia o jogo para ambos.
             // Informa ao jogador que entrou qual é o ID da sala.
             socket.emit('roomJoined', { roomId });
@@ -100,6 +112,7 @@ io.on('connection', (socket) => {
             socket.emit('error', 'Sala não encontrada ou está cheia.');
         }
     });
+    // O listener 'join-room' foi removido, pois matchWins é inicializado acima.
 
     // Evento para quando um jogador acerta o nome
     socket.on('playerFinished', (data) => {
@@ -124,7 +137,7 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('roundEnd', { winnerId: socket.id });
 
         // Envia a atualização de pontuação para todos na sala
-        const scores = room.players.map(p => ({ id: p.id, score: p.score }));
+        const scores = room.players.map(p => ({ id: p.id, score: p.score, matchWins: p.matchWins }));
         io.to(roomId).emit('updateScores', scores);
 
         // Prepara a próxima rodada após um pequeno atraso
