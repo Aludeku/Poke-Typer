@@ -16,6 +16,7 @@ let correctPokemonName = '';
 let currentScore = 0;
 let timeLeft = GAME_TIME;
 let timerInterval = null;
+let highScore = 0;
 let currentLang = 'en'; // Define 'en' como idioma padrão
 
 // --- Constantes da Pontuação ---
@@ -43,11 +44,28 @@ const themeRadioButtons = document.querySelectorAll('input[name="theme"]');
 const gameTitle = document.getElementById('game-title');
 const timerLabel = document.getElementById('timer-label');
 const scoreLabel = document.getElementById('score-label');
+const highScoreLabel = document.getElementById('highscore-label');
 const copyrightFooter = document.getElementById('copyright-footer');
 const settingsTitle = document.getElementById('settings-title');
 const generationsLabel = document.getElementById('generations-label');
 const timeSettingsLabel = document.getElementById('time-settings-label');
 const themeSettingsLabel = document.getElementById('theme-settings-label');
+const multiplayerButton = document.getElementById('multiplayer-button');
+const multiplayerModal = document.getElementById('multiplayer-modal');
+const createRoomButton = document.getElementById('create-room-button');
+const joinRoomButton = document.getElementById('join-room-button');
+const joinRoomInput = document.getElementById('join-room-input');
+const roomInfo = document.getElementById('room-info');
+const roomIdDisplay = document.getElementById('room-id-display');
+// Seletores da área multiplayer
+const multiplayerGameArea = document.getElementById('multiplayer-game-area');
+const multiplayerPokemonImage = document.getElementById('multiplayer-pokemon-image');
+const myGuessContainer = document.getElementById('my-guess-container');
+const opponentGuessContainer = document.getElementById('opponent-guess-container');
+const multiplayerFeedback = document.getElementById('multiplayer-feedback');
+const multiplayerTimerLabel = document.getElementById('multiplayer-timer-label');
+let multiplayerTimeLeft = 0;
+
 
 backgroundMusic.volume = 0.03;
 
@@ -59,6 +77,7 @@ const translations = {
         time: 'Tempo',
         startButton: 'Começar Jogo',
         playAgain: 'Jogar Novamente',
+        highScore: 'Recorde',
         correctGuess: 'Parabéns! É o {pokemonName}!',
         timeUp: 'Tempo esgotado! O pokémon era o {pokemonName}!.',
         settingsTitle: 'Configurações',
@@ -74,6 +93,7 @@ const translations = {
         time: 'Time',
         startButton: 'Start Game',
         playAgain: 'Play Again',
+        highScore: 'High Score',
         correctGuess: 'Congratulations! It\'s {pokemonName}!',
         timeUp: 'Time\'s up! The Pokémon is {pokemonName}!.',
         settingsTitle: 'Settings',
@@ -173,14 +193,44 @@ function createLetterSlots(name) {
         slot.dataset.index = i;
         guessContainer.appendChild(slot);
     }
-    setupSlotListeners();
+    setupSlotListeners(guessContainer);
     // Foca no primeiro slot de input
     guessContainer.querySelector('input.letter-slot')?.focus();
 }
 
+// 3b. Cria os blocos de letras para o modo MULTIPLAYER
+function createMultiplayerLetterSlots(name) {
+    myGuessContainer.innerHTML = ''; // Limpa seus slots
+    opponentGuessContainer.innerHTML = ''; // Limpa os slots do oponente
+
+    for (let i = 0; i < name.length; i++) {
+        const isSpace = name[i] === ' ';
+
+        // Cria slots para o jogador
+        const mySlot = isSpace ? document.createElement('div') : document.createElement('input');
+        mySlot.className = isSpace ? 'letter-space' : 'letter-slot';
+        if (!isSpace) {
+            mySlot.type = 'text';
+            mySlot.maxLength = 1;
+            mySlot.dataset.index = i;
+        } else {
+            mySlot.style.width = '20px';
+        }
+        myGuessContainer.appendChild(mySlot);
+
+        // Cria slots "vazios" para o oponente
+        const opponentSlot = document.createElement('div');
+        opponentSlot.className = isSpace ? 'letter-space' : 'letter-slot';
+        if (isSpace) opponentSlot.style.width = '20px';
+        opponentGuessContainer.appendChild(opponentSlot);
+    }
+    setupSlotListeners(myGuessContainer); // Passa o container correto
+    myGuessContainer.querySelector('input.letter-slot')?.focus();
+}
+
 // 4. Adiciona os listeners de eventos para os slots
-function setupSlotListeners() {
-    const slots = guessContainer.querySelectorAll('input.letter-slot');
+function setupSlotListeners(container) {
+    const slots = container.querySelectorAll('input.letter-slot');
     slots.forEach((slot, index) => {
         slot.addEventListener('input', (e) => {
             const typedChar = e.target.value.toLowerCase();
@@ -190,11 +240,18 @@ function setupSlotListeners() {
                 slot.classList.remove('incorrect');
                 slot.classList.add('correct');
                 
+                // --- LÓGICA MULTIPLAYER ---
+                // Envia o progresso para o servidor
+                const roomId = document.body.dataset.roomId;
+                if (roomId) {
+                    socket.emit('playerProgress', { roomId, progressHtml: myGuessContainer.innerHTML });
+                }
+
                 // Move para o próximo slot
-                if (index < slots.length - 1) {
-                    slots[index + 1].focus();
-                } else {
-                    // Se for o último, verifica se o jogo foi ganho
+                const nextSlot = slots[index + 1];
+                if (nextSlot) {
+                    nextSlot.focus();
+                } else { // Se for o último slot
                     handleCorrectGuess();
                 }
             } else {
@@ -233,10 +290,19 @@ function setupSlotListeners() {
 
 // 4. Atualiza o cronômetro
 function updateTimer() {
-    timeLeft--;
-    timerDisplay.textContent = timeLeft;
-    if (timeLeft <= 0) {
-        endGame();
+    if (gameArea.classList.contains('active')) {
+        timeLeft--;
+        timerDisplay.textContent = timeLeft;
+        if (timeLeft <= 0) {
+            endGame();
+        }
+    } else if (multiplayerGameArea.classList.contains('active')) {
+        multiplayerTimeLeft--;
+        const multiplayerTimerDisplay = document.getElementById('multiplayer-time-left');
+        if (multiplayerTimerDisplay) {
+            multiplayerTimerDisplay.textContent = multiplayerTimeLeft;
+        }
+        // A lógica de fim de jogo multiplayer será controlada pelo servidor
     }
 }
 
@@ -248,6 +314,13 @@ function endGame() {
     guessContainer.querySelectorAll('input.letter-slot').forEach(slot => {
         slot.disabled = true;
     });
+
+    // Verifica e salva a pontuação mais alta
+    if (currentScore > highScore) {
+        highScore = currentScore;
+        localStorage.setItem('pokeTyperHighScore', highScore);
+        highScoreLabel.textContent = `${translations[currentLang].highScore}: ${highScore}`;
+    }
 
     // Revela o Pokémon e mostra a mensagem de fim de jogo
     pokemonImage.classList.remove('hidden');
@@ -286,11 +359,19 @@ function handleCorrectGuess() {
 
     // Calcula a pontuação baseada no tempo
     let points = 0;
-    const difficultyMultiplier = Math.sqrt(60 / GAME_TIME); // Ex: sqrt(2)≈1.41x, sqrt(1)=1x, sqrt(0.67)≈0.82x
+    const difficultyMultiplier = Math.sqrt(60 / GAME_TIME); 
 
     if (timeTaken < MAX_GUESS_TIME) {
         const basePoints = (MAX_GUESS_TIME - timeTaken) * SCORE_MULTIPLIER;
         points = Math.round(basePoints * difficultyMultiplier);
+    }
+
+    // --- LÓGICA MULTIPLAYER ---
+    const roomId = document.body.dataset.roomId;
+    if (roomId) {
+        // Se estiver em modo multiplayer, avisa o servidor que terminou
+        socket.emit('playerFinished', { roomId });
+        return; // Não busca o próximo pokémon, espera o servidor mandar
     }
 
     currentScore += Math.max(points, MINIMUM_SCORE); // Adiciona a pontuação calculada ou a mínima
@@ -339,6 +420,7 @@ function setLanguage() {
 
     // Atualiza textos que também são alterados durante o jogo
     timerLabel.innerHTML = `${t.time}: <span id="time-left">${GAME_TIME}</span>s`;
+    highScoreLabel.textContent = `${t.highScore}: ${highScore}`;
     scoreLabel.textContent = `${t.score}: 0`;
 }
 
@@ -385,15 +467,104 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector(`input[name="theme"][value="${savedTheme}"]`).checked = true;
     applyTheme(savedTheme);
 
+    // Carrega a pontuação mais alta salva
+    highScore = parseInt(localStorage.getItem('pokeTyperHighScore')) || 0;
+
     setLanguage();
     updateActivePokemonList(); // Define a lista inicial de Pokémon (Gen 1)
     fetchNewPokemon();
 });
 
+// --- Lógica Multiplayer com Socket.IO ---
+
+// Conecta ao seu servidor
+const socket = io("http://localhost:3000"); 
+
+multiplayerButton.addEventListener('click', () => {
+    multiplayerModal.classList.add('visible');
+});
+
+createRoomButton.addEventListener('click', () => {
+    socket.emit('createRoom');
+});
+
+joinRoomButton.addEventListener('click', () => {
+    const roomId = joinRoomInput.value.trim().toUpperCase();
+    if (roomId) {
+        socket.emit('joinRoom', roomId);
+    }
+});
+
+// --- Exemplo de como você lidaria com eventos do servidor ---
+
+socket.on('roomCreated', (roomId) => {
+    roomIdDisplay.textContent = roomId;
+    roomInfo.classList.remove('hidden');
+    // Armazena o ID da sala para uso futuro
+    document.body.dataset.roomId = roomId;
+});
+
+socket.on('gameStart', (data) => {
+    multiplayerModal.classList.remove('visible');
+    document.querySelector('.game-modes').style.display = 'none';
+    startButton.style.display = 'none'; // Garante que o botão de um jogador suma
+    gameArea.style.display = 'none';
+    multiplayerGameArea.classList.add('active');
+    settingsButton.disabled = true;
+
+    correctPokemonName = data.pokemonName;
+    
+    // Configura a imagem e os slots
+    multiplayerPokemonImage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
+    multiplayerPokemonImage.classList.add('hidden');
+    createMultiplayerLetterSlots(data.pokemonName);
+
+    // Inicia o timer para o modo multiplayer
+    multiplayerTimeLeft = data.gameTime;
+    const multiplayerTimerDisplay = document.getElementById('multiplayer-time-left');
+    multiplayerTimerDisplay.textContent = multiplayerTimeLeft;
+    clearInterval(timerInterval);
+    timerInterval = setInterval(updateTimer, 1000);
+});
+
+socket.on('nextRound', (data) => {
+    multiplayerFeedback.textContent = '';
+    correctPokemonName = data.pokemonName;
+    multiplayerPokemonImage.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${data.pokemonId}.png`;
+    // Garante que a imagem esteja pronta para a próxima rodada
+    multiplayerPokemonImage.classList.remove('revealed');
+    multiplayerPokemonImage.classList.add('hidden');
+    createMultiplayerLetterSlots(data.pokemonName);
+});
+
+socket.on('roundEnd', (data) => {
+    const { winnerId } = data;
+    if (winnerId === socket.id) {
+        // Você venceu!
+        multiplayerFeedback.textContent = "Você venceu a rodada!";
+        multiplayerFeedback.className = 'correct';
+    } else {
+        // Você perdeu!
+        multiplayerFeedback.textContent = "Você perdeu a rodada!";
+        multiplayerFeedback.className = 'incorrect';
+    }
+    // Revela o Pokémon para todos
+    multiplayerPokemonImage.classList.remove('hidden');
+    multiplayerPokemonImage.classList.add('revealed');
+});
+
+socket.on('opponentProgress', (data) => {
+    opponentGuessContainer.innerHTML = data.progressHtml;
+});
+
+socket.on('error', (message) => {
+    alert(message);
+});
+
 // Adiciona um listener global para "prender" o foco nos inputs do jogo
 document.addEventListener('click', (event) => {
     // Só executa a lógica se a área do jogo estiver ativa
-    if (!gameArea.classList.contains('active')) {
+    if (!gameArea.classList.contains('active') && !multiplayerGameArea.classList.contains('active')) {
         return;
     }
 
@@ -404,13 +575,16 @@ document.addEventListener('click', (event) => {
         return;
     }
 
+    // Determina qual container de input está ativo
+    const activeContainer = multiplayerGameArea.classList.contains('active') ? myGuessContainer : guessContainer;
+
     // Se o clique foi em qualquer outro lugar, encontra o primeiro slot vazio e foca nele
-    const firstEmptySlot = Array.from(guessContainer.querySelectorAll('input.letter-slot')).find(slot => slot.value === '');
+    const firstEmptySlot = Array.from(activeContainer.querySelectorAll('input.letter-slot')).find(slot => slot.value === '');
 
     if (firstEmptySlot) {
         firstEmptySlot.focus();
     } else {
         // Se não houver slots vazios (caso raro), foca no último
-        guessContainer.querySelector('input.letter-slot:last-child')?.focus();
+        activeContainer.querySelector('input.letter-slot:last-child')?.focus();
     }
 });

@@ -167,6 +167,12 @@ h1 {
     transition: transform 0.1s;
 }
 
+.game-modes {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
 #start-button:active {
     transform: scale(0.98);
 }
@@ -354,4 +360,71 @@ h1 {
 
 #copyright-footer a:hover {
     text-decoration: underline;
+}
+
+/* Estilos Multiplayer */
+#opponent-area {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    transform: scale(0.7);
+    transform-origin: bottom right;
+    background-color: var(--container-bg);
+    padding: 1rem;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    border: 2px solid var(--border-color);
+}
+
+#opponent-area.hidden {
+    display: none;
+}
+
+#multiplayer-modal .modal-content {
+    text-align: center;
+}
+
+#room-info {
+    margin: 1rem 0;
+    padding: 0.5rem;
+    background-color: var(--slot-bg);
+    border-radius: 8px;
+}
+
+/* Estilos da Arena Multiplayer */
+#multiplayer-game-area {
+    display: none; /* Escondido por padrão */
+}
+
+#multiplayer-game-area.active {
+    display: block;
+}
+
+.multiplayer-arenas {
+    display: flex;
+    justify-content: space-around;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+#my-arena, #opponent-arena {
+    flex: 1;
+    padding: 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+}
+
+#my-arena h3, #opponent-arena h3 {
+    margin-top: 0;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 0.5rem;
+}
+
+#my-guess-container, #opponent-guess-container {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+    min-height: 50px; /* Garante espaço para os slots */
 }

@@ -1,0 +1,12 @@
+{
+  "name": "poke-typer",
+  "version": "1.0.0",
+  "description": "Gotta type 'em all!",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
