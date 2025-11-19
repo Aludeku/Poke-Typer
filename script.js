@@ -443,7 +443,15 @@ startButton.addEventListener('click', startGame);
 
 startMultiplayerButton.addEventListener('click', () => {
     const roomId = document.body.dataset.roomId;
-    socket.emit('startMatch', roomId);
+    // Coleta as configurações atuais do anfitrião
+    const selectedTime = document.querySelector('input[name="game-time"]:checked').value;
+    const selectedGenerations = Array.from(document.querySelectorAll('input[name="generation"]:checked')).map(cb => cb.value);
+
+    const settings = {
+        gameTime: parseInt(selectedTime, 10),
+        generations: selectedGenerations.length > 0 ? selectedGenerations : ['1'] // Garante que pelo menos a Gen 1 seja usada
+    };
+    socket.emit('startMatch', { roomId, settings });
 });
 
 // Controla a música

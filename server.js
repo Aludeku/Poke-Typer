@@ -25,59 +25,118 @@ app.get('/', (req, res) => {
 
 // --- Lógica do Jogo Multiplayer ---
 
+// Copia as constantes de geração do script.js para o servidor
+const GENERATION_RANGES = {
+    1: { start: 1, end: 151 },
+    2: { start: 152, end: 251 },
+    3: { start: 252, end: 386 },
+    4: { start: 387, end: 493 },
+    5: { start: 494, end: 649 },
+    6: { start: 650, end: 721 },
+    7: { start: 722, end: 809 },
+    8: { start: 810, end: 905 },
+    9: { start: 906, end: 1025 },
+};
+
 // Função para iniciar o jogo em uma sala
-function startGameForRoom(roomId) {
-    // Sorteia um Pokémon
-    const pokemonId = Math.floor(Math.random() * 151) + 1; // Exemplo simples com Gen 1
+function startGameForRoom(roomId, settings) {
+    const { gameTime, generations } = settings;
+
+    // Função interna para buscar um Pokémon e iniciar a rodada
+    const startRound = () => {
+        const pokemonPool = [];
+        generations.forEach(gen => {
+            const range = GENERATION_RANGES[gen];
+            if (range) {
+                for (let i = range.start; i <= range.end; i++) {
+                    pokemonPool.push(i);
+                }
+            }
+        });
+        const pokemonId = pokemonPool[Math.floor(Math.random() * pokemonPool.length)];
+
+        fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`)
+            .then(res => res.json())
+            .then(data => {
+                const room = rooms[roomId];
+
+                if (room) { // Garante que a sala ainda existe
+                    const pokemonName = data.name.toLowerCase().replace('-', ' ');
+                    room.pokemonName = pokemonName;
+                    room.roundOver = false; // Inicia a rodada como "não terminada"
+
+                    // Envia o sinal de início para TODOS na sala
+                    io.to(roomId).emit('gameStart', { pokemonName, pokemonId: pokemonId, gameTime });
+                }
+            }).catch(err => console.error("Erro ao buscar Pokémon para a sala:", err));
+    };
+
+    // Lógica principal da partida
+    const room = rooms[roomId];
+    if (room) {
+        // Limpa qualquer timer antigo que possa estar rodando para evitar duplicação
+        if (room.timerInterval) {
+            clearInterval(room.timerInterval);
+        }
+
+        // Zera a pontuação da partida atual para todos os jogadores
+        room.players.forEach(player => {
+            player.score = 0;
+        });
+
+        // Inicia a primeira rodada
+        startRound();
+
+        // Inicia o cronômetro do jogo no servidor
+        room.gameTimer = gameTime;
+        room.timerInterval = setInterval(() => {
+            room.gameTimer--;
+            io.to(roomId).emit('timerTick', room.gameTimer);
+
+            if (room.gameTimer <= 0) {
+                clearInterval(room.timerInterval);
+                // Determina o vencedor
+                const player1 = room.players[0];
+                const player2 = room.players[1];
+                const winnerId = player1.score > player2.score ? player1.id : (player2.score > player1.score ? player2.id : 'draw');
+                
+                // Incrementa a contagem de vitórias da partida
+                const winnerPlayer = room.players.find(p => p.id === winnerId);
+                if (winnerPlayer) {
+                    winnerPlayer.matchWins++;
+                }
+                io.to(roomId).emit('matchEnd', { winnerId, players: room.players });
+            }
+        }, 1000);
+    }
+}
+
+// Função para buscar um novo Pokémon durante a partida
+function fetchNextPokemonForRoom(room, roomId) {
+    // Usa as configurações da sala para sortear o próximo Pokémon.
+    // Se as configurações não existirem, usa a Gen 1 como fallback.
+    const generations = room.settings?.generations || ['1'];
+    const pokemonPool = [];
+    generations.forEach(gen => {
+        const range = GENERATION_RANGES[gen];
+        if (range) {
+            for (let i = range.start; i <= range.end; i++) {
+                pokemonPool.push(i);
+            }
+        }
+    });
+
+    // Sorteia um Pokémon do pool correto
+    const pokemonId = pokemonPool[Math.floor(Math.random() * pokemonPool.length)];
 
     fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`)
         .then(res => res.json())
-        .then(data => {
+        .then(pokemonData => {
             const room = rooms[roomId];
-            
-            // Limpa qualquer timer antigo que possa estar rodando para evitar duplicação
-            if (room && room.timerInterval) {
-                clearInterval(room.timerInterval);
-            }
-
-            if (room) { // Garante que a sala ainda existe
-                const pokemonName = data.name.toLowerCase().replace('-', ' ');
-                room.pokemonName = pokemonName;
-                room.roundOver = false; // Inicia a rodada como "não terminada"
-
-                // Zera a pontuação da partida atual para todos os jogadores
-                room.players.forEach(player => {
-                    player.score = 0;
-                });
-
-                // Envia o sinal de início para TODOS na sala
-                const gameTime = 60; // Tempo fixo para multiplayer
-                room.gameTimer = gameTime;
-
-                io.to(roomId).emit('gameStart', { pokemonName, pokemonId: pokemonId, gameTime });
-
-                // Inicia o cronômetro do jogo no servidor
-                room.timerInterval = setInterval(() => {
-                    room.gameTimer--;
-                    io.to(roomId).emit('timerTick', room.gameTimer);
-
-                    if (room.gameTimer <= 0) {
-                        clearInterval(room.timerInterval);
-                        // Determina o vencedor
-                        const player1 = room.players[0];
-                        const player2 = room.players[1];
-                        const winnerId = player1.score > player2.score ? player1.id : (player2.score > player1.score ? player2.id : 'draw');
-                        
-                        // Incrementa a contagem de vitórias da partida
-                        const winnerPlayer = room.players.find(p => p.id === winnerId);
-                        if (winnerPlayer) {
-                            winnerPlayer.matchWins++;
-                        }
-                        io.to(roomId).emit('matchEnd', { winnerId, players: room.players });
-                    }
-                }, 1000);
-            }
-        }).catch(err => console.error("Erro ao iniciar jogo para a sala:", err));
+            room.roundOver = false; // Reabre a rodada
+            room.pokemonName = pokemonData.name.toLowerCase().replace('-', ' ');
+            io.to(roomId).emit('nextRound', { pokemonName: room.pokemonName, pokemonId });
+        }).catch(err => console.error("Erro ao buscar próximo Pokémon:", err));
 }
 
 let rooms = {}; // Objeto para armazenar o estado de todas as salas
@@ -144,15 +203,7 @@ io.on('connection', (socket) => {
         setTimeout(() => {
             // Verifica se o tempo da partida não acabou
             if (room && room.gameTimer > 0) {
-                // Sorteia um novo Pokémon e inicia a próxima rodada
-                const pokemonId = Math.floor(Math.random() * 151) + 1;
-                fetch(`https://pokeapi.co/api/v2/pokemon/${pokemonId}`)
-                    .then(res => res.json())
-                    .then(pokemonData => {
-                        room.roundOver = false; // Reabre a rodada
-                        room.pokemonName = pokemonData.name.toLowerCase().replace('-', ' ');
-                        io.to(roomId).emit('nextRound', { pokemonName: room.pokemonName, pokemonId });
-                    }).catch(err => console.error("Erro ao buscar próximo Pokémon:", err));
+                fetchNextPokemonForRoom(room, roomId);
             }
         }, 3000); // 3 segundos para a próxima rodada
     });
@@ -165,16 +216,17 @@ io.on('connection', (socket) => {
     });
 
     // Evento para o host iniciar a partida
-    socket.on('startMatch', (roomId) => {
+    socket.on('startMatch', (data) => {
+        const { roomId, settings } = data;
         const room = rooms[roomId];
         // IMPEDE que a partida seja reiniciada se o timer já estiver rodando
         if (room && room.gameTimer > 0) {
             console.log(`Tentativa de reiniciar a partida na sala ${roomId} foi bloqueada.`);
             return;
         }
-
+        room.settings = settings; // Armazena as configurações na sala
         // Inicia o jogo para a sala
-        startGameForRoom(roomId);
+        startGameForRoom(roomId, settings);
     });
 
     // Evento para quando um jogador se desconecta
