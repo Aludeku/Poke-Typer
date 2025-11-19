@@ -288,9 +288,9 @@ h1 {
 }
 
 .checkbox-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* Cria duas colunas */
+    gap: 0.5rem 1rem; /* Espaçamento vertical e horizontal */
     margin-bottom: 1.5rem;
 }
 
@@ -302,8 +302,8 @@ h1 {
 }
 
 .gen-icon {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     margin-right: 8px; /* Espaço entre o ícone e a checkbox */
 }
 
@@ -348,7 +348,7 @@ h1 {
 }
 
 #copyright-footer a {
-    color: #555;
+    color: #6f00ff; 
     text-decoration: none;
 }
 

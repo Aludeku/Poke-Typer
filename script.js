@@ -18,6 +18,12 @@ let timeLeft = GAME_TIME;
 let timerInterval = null;
 let currentLang = 'en'; // Define 'en' como idioma padrão
 
+// --- Constantes da Pontuação ---
+const MAX_GUESS_TIME = 20; // Tempo máximo (em segundos) para uma boa pontuação
+const SCORE_MULTIPLIER = 18; // Multiplicador para escalar a pontuação
+const MINIMUM_SCORE = 10; // Pontuação mínima por acerto
+let timeStartedForPokemon = 0; // Timestamp de quando o Pokémon apareceu
+
 // Seletores do DOM
 const pokemonImage = document.getElementById('pokemon-image');
 const guessContainer = document.getElementById('guess-container');
@@ -60,7 +66,7 @@ const translations = {
         themeSettingsLabel: 'Tema:',
         timeSettingsLabel: 'Tempo da Partida:',
         loadError: 'Erro ao carregar Pokémon. Tente novamente.',
-        footer: 'Desenvolvido por <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon é propriedade de ©GameFreak ©CreaturesInk e ©Nintendo.',
+        footer: 'Desenvolvido por <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Poipole sprite: <a href="https://www.deviantart.com/thecraigadile/art/Shiny-Gen-7-Pokemon-Menu-Icons-694012919" target="_blank" rel="noopener noreferrer">TheCraigadile</a>, Miraidon sprite:<a href="https://www.deviantart.com/ezerart/art/Pokemon-Gen-9-Icon-sprites-3DS-Style-944211258" target="_blank" rel="noopener noreferrer">Ezerart</a>. Pokemon é propriedade de ©GameFreak ©CreaturesInk e ©Nintendo.',
     },
     en: {
         title: 'Who\'s That Pokémon?',
@@ -75,7 +81,7 @@ const translations = {
         themeSettingsLabel: 'Theme:',
         timeSettingsLabel: 'Game Duration:',
         loadError: 'Error loading Pokémon. Please try again.',
-        footer: 'Developed by <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon is property of ©GameFreak ©CreaturesInk and ©Nintendo.',
+        footer: 'Developed by <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Poipole sprite: <a href="https://www.deviantart.com/thecraigadile/art/Shiny-Gen-7-Pokemon-Menu-Icons-694012919" target="_blank" rel="noopener noreferrer">TheCraigadile</a>, Miraidon sprite:<a href="https://www.deviantart.com/ezerart/art/Pokemon-Gen-9-Icon-sprites-3DS-Style-944211258" target="_blank" rel="noopener noreferrer">Ezerart</a>. Pokemon is property of ©GameFreak ©CreaturesInk and ©Nintendo.',
     }
 };
 
@@ -133,6 +139,9 @@ async function fetchNewPokemon() {
         const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${randomId}.png`;
         pokemonImage.src = imageUrl;
         pokemonImage.alt = `Silhueta do Pokémon ${data.name}`;
+
+    // Inicia o cronômetro para este Pokémon específico
+    timeStartedForPokemon = Date.now();
 
         // 4. Cria os slots para as letras
         createLetterSlots(correctPokemonName);
@@ -271,7 +280,20 @@ function startGame() {
 }
 
 function handleCorrectGuess() {
-    currentScore++;
+    // Calcula o tempo gasto para acertar
+    const timeEnded = Date.now();
+    const timeTaken = (timeEnded - timeStartedForPokemon) / 1000; // em segundos
+
+    // Calcula a pontuação baseada no tempo
+    let points = 0;
+    const difficultyMultiplier = Math.sqrt(60 / GAME_TIME); // Ex: sqrt(2)≈1.41x, sqrt(1)=1x, sqrt(0.67)≈0.82x
+
+    if (timeTaken < MAX_GUESS_TIME) {
+        const basePoints = (MAX_GUESS_TIME - timeTaken) * SCORE_MULTIPLIER;
+        points = Math.round(basePoints * difficultyMultiplier);
+    }
+
+    currentScore += Math.max(points, MINIMUM_SCORE); // Adiciona a pontuação calculada ou a mínima
     scoreLabel.textContent = `${translations[currentLang].score}: ${currentScore}`;
     feedbackMessage.textContent = translations[currentLang].correctGuess.replace('{pokemonName}', correctPokemonName.toUpperCase());
     feedbackMessage.className = 'correct';
@@ -328,6 +350,13 @@ startButton.addEventListener('click', startGame);
 // Controla a música
 musicToggleButton.addEventListener('click', toggleMusic);
 
+// Aplica o tema imediatamente ao clicar na opção
+themeRadioButtons.forEach(radio => {
+    radio.addEventListener('change', () => {
+        applyTheme(radio.value);
+    });
+});
+
 // Controla o modal de configurações
 settingsButton.addEventListener('click', () => {
     settingsModal.classList.add('visible');
@@ -342,7 +371,6 @@ saveSettingsButton.addEventListener('click', () => {
 
     // Aplica o tema selecionado e salva no localStorage
     const selectedTheme = document.querySelector('input[name="theme"]:checked').value;
-    applyTheme(selectedTheme);
     localStorage.setItem('pokeTyperTheme', selectedTheme);
 
     settingsModal.classList.remove('visible');
