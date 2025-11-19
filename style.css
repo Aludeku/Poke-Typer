@@ -1,3 +1,45 @@
+:root {
+    --page-bg: #f0f0f0;
+    --container-bg: #fff;
+    --text-color: #333;
+    --border-color: #ddd;
+    --hover-bg: #f0f0f0;
+    --slot-bg: #eee;
+    --slot-border: #ccc;
+    --title-yellow: #ffde00;
+    --title-blue-stroke: #3B4CCA;
+    --start-btn-bg: #ffde00;
+    --start-btn-text: #333;
+    --start-btn-border: #cc0000;
+}
+
+body.dark-theme {
+    /* A "light-dark" charcoal/slate theme */
+    --page-bg: #343a40;
+    --container-bg: #495057;
+    --text-color: #f8f9fa;
+    --border-color: #6c757d;
+    --hover-bg: #5a6268;
+    --slot-bg: #495057;
+    --slot-border: #6c757d;
+}
+
+body.oldschool-theme {
+    /* SNES (Super Nintendo) inspired theme */
+    --page-bg: #c6c6c6; /* SNES console gray */
+    --container-bg: #b2b2b2; /* Slightly darker gray for contrast */
+    --text-color: #745f98; /* SNES purple */
+    --border-color: #745f98;
+    --hover-bg: #a8a8a8;
+    --slot-bg: #b2b2b2;
+    --slot-border: #745f98;
+    --title-yellow: #ffd900; /* SNES Yellow button */
+    --title-blue-stroke: #0072bc; /* SNES Blue button */
+    --start-btn-bg: #745f98;
+    --start-btn-text: #f8f9fa;
+    --start-btn-border: #745f98;
+}
+
 body {
     font-family: 'Arial', sans-serif;
     display: flex;
@@ -5,8 +47,8 @@ body {
     align-items: center;
     min-height: 100vh;
     margin: 0;
-    background-color: #f0f0f0;
-    color: #333;
+    background-color: var(--page-bg);
+    color: var(--text-color);
 }
     
 /* Define a fonte customizada que baixamos */
@@ -16,7 +58,7 @@ body {
 }
 
 .container {
-    background-color: #fff;
+    background-color: var(--container-bg);
     padding: 2rem;
     border-radius: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
@@ -27,10 +69,10 @@ body {
 
 h1 {
     font-family: 'PokemonFont', sans-serif; /* Usa a fonte Pokémon, com um fallback */
-    color: #ffde00; /* Amarelo Pokémon */
+    color: var(--title-yellow); /* Amarelo Pokémon */
     margin-bottom: 1.5rem;
     font-size: 2.5rem; /* Aumenta um pouco o tamanho */
-    -webkit-text-stroke: 2px #3B4CCA;
+    -webkit-text-stroke: 2px var(--title-blue-stroke);
 }
 
 #pokemon-image {
@@ -72,7 +114,7 @@ h1 {
 .letter-slot {
     width: 40px;
     height: 40px;
-    border: 2px solid #ccc;
+    border: 2px solid var(--slot-border);
     border-radius: 8px;
     display: inline-block;
     font-size: 1.5rem;
@@ -80,20 +122,20 @@ h1 {
     text-align: center;
     line-height: 40px;
     text-transform: uppercase;
-    background-color: #eee; /* Cinza claro */
+    background-color: var(--slot-bg);
     transition: background-color 0.3s, border-color 0.3s, transform 0.1s;
     caret-color: transparent; /* Esconde o cursor piscando */
 }
 
 .letter-slot.correct {
-    background-color: #28a745; /* Verde */
-    border-color: #28a745;
+    background-color: #00a759; /* SNES Green button */
+    border-color: #00a759;
     color: white;
 }
 
 .letter-slot.incorrect {
-    background-color: #dc3545; /* Vermelho */
-    border-color: #dc3545;
+    background-color: #e60012; /* SNES Red button */
+    border-color: #e60012;
     color: white;
 }
 
@@ -113,9 +155,9 @@ h1 {
 }
 
 #start-button {
-    background-color: #ffde00; /* Amarelo Pokémon */
-    color: #333;
-    border: 2px solid #cc0000;
+    background-color: var(--start-btn-bg);
+    color: var(--start-btn-text);
+    border: 2px solid var(--start-btn-border);
     padding: 1rem 2rem;
     margin-top: 1.5rem;
     border-radius: 10px;
@@ -180,8 +222,8 @@ h1 {
 }
 
 #music-toggle-button, #settings-button {
-    background: transparent;
-    border: 2px solid #ddd;
+    background-color: var(--container-bg);
+    border: 2px solid var(--border-color);
     border-radius: 50%;
     width: 40px;
     height: 40px;
@@ -194,7 +236,7 @@ h1 {
 }
 
 #music-toggle-button:hover, #settings-button:hover {
-    background-color: #f0f0f0;
+    background-color: var(--hover-bg);
 }
 
 #settings-button:disabled {
@@ -225,7 +267,7 @@ h1 {
 }
 
 .modal-content {
-    background-color: white;
+    background-color: var(--container-bg);
     padding: 2rem;
     border-radius: 15px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
@@ -237,7 +279,7 @@ h1 {
 .modal-content h2 {
     text-align: center;
     margin-top: 0;
-    color: #333;
+    color: var(--text-color);
 }
 
 .settings-group p {
@@ -257,6 +299,12 @@ h1 {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+}
+
+.gen-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px; /* Espaço entre o ícone e a checkbox */
 }
 
 .radio-group {
@@ -296,7 +344,7 @@ h1 {
     padding: 10px;
     text-align: center;
     font-size: 0.8rem;
-    color: #888;
+    color: var(--text-color);
 }
 
 #copyright-footer a {

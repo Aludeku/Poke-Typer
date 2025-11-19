@@ -32,6 +32,7 @@ const settingsModal = document.getElementById('settings-modal');
 const saveSettingsButton = document.getElementById('save-settings-button');
 const generationCheckboxes = document.querySelectorAll('input[name="generation"]');
 const timeRadioButtons = document.querySelectorAll('input[name="game-time"]');
+const themeRadioButtons = document.querySelectorAll('input[name="theme"]');
 // Elementos de texto para tradução
 const gameTitle = document.getElementById('game-title');
 const timerLabel = document.getElementById('timer-label');
@@ -40,6 +41,7 @@ const copyrightFooter = document.getElementById('copyright-footer');
 const settingsTitle = document.getElementById('settings-title');
 const generationsLabel = document.getElementById('generations-label');
 const timeSettingsLabel = document.getElementById('time-settings-label');
+const themeSettingsLabel = document.getElementById('theme-settings-label');
 
 backgroundMusic.volume = 0.03;
 
@@ -55,6 +57,7 @@ const translations = {
         timeUp: 'Tempo esgotado! O pokémon era o {pokemonName}!.',
         settingsTitle: 'Configurações',
         generationsLabel: 'Gerações de Pokémon:',
+        themeSettingsLabel: 'Tema:',
         timeSettingsLabel: 'Tempo da Partida:',
         loadError: 'Erro ao carregar Pokémon. Tente novamente.',
         footer: 'Desenvolvido por <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon é propriedade de ©GameFreak ©CreaturesInk e ©Nintendo.',
@@ -69,6 +72,7 @@ const translations = {
         timeUp: 'Time\'s up! The Pokémon is {pokemonName}!.',
         settingsTitle: 'Settings',
         generationsLabel: 'Pokémon Generations:',
+        themeSettingsLabel: 'Theme:',
         timeSettingsLabel: 'Game Duration:',
         loadError: 'Error loading Pokémon. Please try again.',
         footer: 'Developed by <a href="https://x.com/Aludeku2" target="_blank" rel="noopener noreferrer">Aludeku</a>. Pokemon is property of ©GameFreak ©CreaturesInk and ©Nintendo.',
@@ -230,17 +234,19 @@ function updateTimer() {
 // 5. Finaliza o jogo
 function endGame() {
     clearInterval(timerInterval);
+
     // Desabilita todos os slots
     guessContainer.querySelectorAll('input.letter-slot').forEach(slot => {
         slot.disabled = true;
     });
-    document.getElementById('check-button').style.display = 'none'; // Esconde o botão de verificar
+
+    // Revela o Pokémon e mostra a mensagem de fim de jogo
+    pokemonImage.classList.remove('hidden');
+    pokemonImage.classList.add('revealed');
     feedbackMessage.textContent = translations[currentLang].timeUp.replace('{pokemonName}', correctPokemonName.toUpperCase());
     feedbackMessage.className = 'info';
     startButton.textContent = translations[currentLang].playAgain;
     startButton.style.display = 'block';
-    pokemonImage.classList.remove('hidden');
-    pokemonImage.classList.add('revealed');
     settingsButton.disabled = false; // Reabilita o botão de configurações
 }
 
@@ -286,6 +292,13 @@ function toggleMusic() {
     }
 }
 
+// Função para aplicar o tema
+function applyTheme(theme) {
+    document.body.classList.remove('light-theme', 'dark-theme', 'oldschool-theme');
+    if (theme !== 'light') { // 'light' é o padrão, não precisa de classe
+        document.body.classList.add(`${theme}-theme`);
+    }
+}
 
 function setLanguage() {
     const lang = navigator.language.split('-')[0];
@@ -300,6 +313,7 @@ function setLanguage() {
     settingsTitle.textContent = t.settingsTitle;
     generationsLabel.textContent = t.generationsLabel;
     timeSettingsLabel.textContent = t.timeSettingsLabel;
+    themeSettingsLabel.textContent = t.themeSettingsLabel;
 
     // Atualiza textos que também são alterados durante o jogo
     timerLabel.innerHTML = `${t.time}: <span id="time-left">${GAME_TIME}</span>s`;
@@ -325,6 +339,12 @@ saveSettingsButton.addEventListener('click', () => {
     const selectedTime = document.querySelector('input[name="game-time"]:checked').value;
     GAME_TIME = parseInt(selectedTime, 10);
     timerLabel.innerHTML = `${translations[currentLang].time}: <span id="time-left">${GAME_TIME}</span>s`;
+
+    // Aplica o tema selecionado e salva no localStorage
+    const selectedTheme = document.querySelector('input[name="theme"]:checked').value;
+    applyTheme(selectedTheme);
+    localStorage.setItem('pokeTyperTheme', selectedTheme);
+
     settingsModal.classList.remove('visible');
     //fetchNewPokemon(); // Carrega um novo Pokémon com as novas configurações
 });
@@ -332,6 +352,11 @@ saveSettingsButton.addEventListener('click', () => {
 // Inicialização: Carrega o primeiro Pokémon assim que a página é carregada
 // mas o esconde até que o usuário clique em "Começar Jogo"
 document.addEventListener('DOMContentLoaded', () => {
+    // Carrega e aplica o tema salvo
+    const savedTheme = localStorage.getItem('pokeTyperTheme') || 'light';
+    document.querySelector(`input[name="theme"][value="${savedTheme}"]`).checked = true;
+    applyTheme(savedTheme);
+
     setLanguage();
     updateActivePokemonList(); // Define a lista inicial de Pokémon (Gen 1)
     fetchNewPokemon();
