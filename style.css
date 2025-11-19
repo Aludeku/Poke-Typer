@@ -9,6 +9,12 @@ body {
     color: #333;
 }
     
+/* Define a fonte customizada que baixamos */
+@font-face {
+    font-family: 'PokemonFont'; /* Damos um nome para a fonte */
+    src: url('fonts/Pokemon-Solid.ttf') format('truetype'); /* Caminho para o arquivo */
+}
+
 .container {
     background-color: #fff;
     padding: 2rem;
@@ -20,8 +26,12 @@ body {
 }
 
 h1 {
-    color: #cc0000; /* Cor vermelha clássica de Pokémon */
+    font-family: 'PokemonFont', sans-serif; /* Usa a fonte Pokémon, com um fallback */
+    color: #ffde00; /* Amarelo Pokémon */
     margin-bottom: 1.5rem;
+    font-size: 2.5rem; /* Aumenta um pouco o tamanho */
+    /* Adiciona o contorno azul escuro */
+    -webkit-text-stroke: 2px #3B4CCA;
 }
 
 #pokemon-image {
@@ -30,12 +40,12 @@ h1 {
     margin: 1.5rem auto;
     /* Efeito de Silhueta */
     filter: brightness(0) invert(0); 
-    transition: filter 0.5s ease-in-out;
 }
 
 #pokemon-image.revealed {
     /* Remove o efeito de silhueta ao revelar */
     filter: none; 
+    transition: filter 0.5s ease-in-out; /* A transição acontece SÓ ao revelar */
 }
 
 #pokemon-image.hidden {
@@ -46,15 +56,46 @@ h1 {
 .input-group {
     display: flex;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
     margin-top: 1rem;
+    gap: 10px; /* Espaçamento entre os elementos */
 }
 
-#guess-input {
-    padding: 0.75rem;
+#guess-container {
+    display: flex;
+    gap: 5px; /* Espaço entre as letras */
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+}
+
+.letter-slot {
+    width: 40px;
+    height: 40px;
     border: 2px solid #ccc;
-    border-radius: 8px 0 0 8px;
-    font-size: 1rem;
-    width: 65%;
+    border-radius: 8px;
+    display: inline-block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+    line-height: 40px;
+    text-transform: uppercase;
+    background-color: #eee; /* Cinza claro */
+    transition: background-color 0.3s, border-color 0.3s, transform 0.1s;
+    caret-color: transparent; /* Esconde o cursor piscando */
+}
+
+.letter-slot.correct {
+    background-color: #28a745; /* Verde */
+    border-color: #28a745;
+    color: white;
+}
+
+.letter-slot.incorrect {
+    background-color: #dc3545; /* Vermelho */
+    border-color: #dc3545;
+    color: white;
 }
 
 #check-button {
@@ -62,7 +103,7 @@ h1 {
     color: white;
     border: none;
     padding: 0.75rem 1rem;
-    border-radius: 0 8px 8px 0;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 1rem;
     transition: background-color 0.3s;
@@ -103,6 +144,11 @@ h1 {
     color: red;
 }
 
+.shake {
+    animation: shake 0.5s;
+}
+
+
 #game-area {
     /* Esconde a área do jogo inicialmente */
     display: none; 
@@ -116,4 +162,49 @@ h1 {
 #score, #hint-text {
     margin-top: 1rem;
     font-size: 1.1rem;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+
+#music-toggle-button {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: 2px solid #ddd;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+#music-toggle-button:hover {
+    background-color: #f0f0f0;
+}
+
+#copyright-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+#copyright-footer a {
+    color: #555;
+    text-decoration: none;
+}
+
+#copyright-footer a:hover {
+    text-decoration: underline;
 }

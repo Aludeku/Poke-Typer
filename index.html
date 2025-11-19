@@ -3,31 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quem é Esse Pokémon?</title>
+    <title>PokéTyper</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" type="image/x-icon" href="questionmark.ico"> 
 </head>
 <body>
     <div class="container">
-        <h1>Quem é Esse Pokémon?</h1>
+        <button id="music-toggle-button">🎵</button>
+
+        <h1 id="game-title">Quem é Esse Pokémon?</h1>
         
         <div id="game-area">
-            <p id="timer">Tempo: <span id="time-left">60</span>s</p>
+            <p id="timer-label">Tempo: <span id="time-left">60</span>s</p>
             <img id="pokemon-image" src="" alt="Imagem do Pokémon" class="hidden"> 
             
             <div id="feedback-message"></div>
             
             <div class="input-group">
-                <input type="text" id="guess-input" placeholder="Digite o nome do Pokémon" autocomplete="off">
+                <div id="guess-container"></div>
+
                 <button id="check-button">Verificar</button>
             </div>
             
-            <p id="score">Pontuação: 0</p>
+            <p id="score-label">Pontuação: 0</p>
         </div>
         
         <button id="start-button">Começar Jogo</button>
 
         <p id="hint-text"></p>
     </div>
+
+    <footer id="copyright-footer">
+        <!-- JavaScript -->
+    </footer>
+
+    <audio id="background-music" loop>
+        <source src="Pokemon Theme Song - Blue_Red (Non copyrighted music) - Tune Library (youtube).mp3" type="audio/mpeg">
+    </audio>
 
     <script src="script.js"></script>
 </body>
